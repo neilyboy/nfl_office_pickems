@@ -1,5 +1,5 @@
 from flask import Blueprint, jsonify, request, send_file, current_app
-from flask_login import current_user, login_user, logout_user
+from flask_login import current_user, login_user, logout_user, login_required
 from . import db, bcrypt, User, Game, Pick, login_manager
 from datetime import datetime, timedelta
 import json
@@ -457,6 +457,13 @@ def logout():
     logout_user()
     return jsonify({'success': True})
 
+@bp.route('/api/auth/logout', methods=['POST'])
+@login_required
+def logout_new():
+    """Logout the current user"""
+    logout_user()
+    return jsonify({'message': 'Successfully logged out'})
+
 @bp.route('/api/games/week/<int:week>')
 @auth_required
 def get_games_for_week(week):
@@ -553,4 +560,19 @@ def get_games_for_week(week):
     except Exception as e:
         logger.error(f"Error getting games for week {week}: {str(e)}")
         logger.exception(e)
+        return jsonify({'error': str(e)}), 500
+
+@bp.route('/api/admin/update-games', methods=['POST'])
+@login_required
+def manual_update_games():
+    """Manually trigger game updates (admin only)"""
+    if not current_user.is_admin:
+        return jsonify({'error': 'Unauthorized'}), 403
+        
+    try:
+        from .game_updater import update_game_scores
+        update_game_scores()
+        return jsonify({'message': 'Games updated successfully'})
+    except Exception as e:
+        logger.error(f"Error in manual game update: {str(e)}")
         return jsonify({'error': str(e)}), 500

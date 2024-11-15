@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
-import { Box, AppBar, Toolbar, IconButton, Typography, Drawer, List, ListItem, ListItemIcon, ListItemText } from '@mui/material';
+import { Box, AppBar, Toolbar, IconButton, Typography, Drawer, List, ListItem, ListItemIcon, ListItemText, Button, Divider } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import LeaderboardIcon from '@mui/icons-material/Leaderboard';
 import SportsFootballIcon from '@mui/icons-material/SportsFootball';
 import BarChartIcon from '@mui/icons-material/BarChart';
 import SettingsIcon from '@mui/icons-material/Settings';
+import LogoutIcon from '@mui/icons-material/Logout';
+import RefreshIcon from '@mui/icons-material/Refresh';
 
 // Import components
 import Login from './components/Login';
@@ -35,7 +37,7 @@ function PrivateRoute({ children }) {
 
 function App() {
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, user, logout } = useAuth();
   const navigate = useNavigate();
 
   const toggleDrawer = () => {
@@ -51,6 +53,40 @@ function App() {
     toggleDrawer();
   };
 
+  const handleLogout = async () => {
+    try {
+      const response = await fetch('/api/auth/logout', {
+        method: 'POST',
+        credentials: 'include',
+      });
+      if (response.ok) {
+        logout();
+        navigate('/login');
+      }
+    } catch (error) {
+      console.error('Error logging out:', error);
+    }
+  };
+
+  const handleManualUpdate = async () => {
+    try {
+      const response = await fetch('/api/admin/update-games', {
+        method: 'POST',
+        credentials: 'include',
+      });
+      if (response.ok) {
+        const data = await response.json();
+        alert(data.message);
+      } else {
+        const error = await response.json();
+        alert(error.error);
+      }
+    } catch (error) {
+      console.error('Error updating games:', error);
+      alert('Error updating games');
+    }
+  };
+
   return (
     <Box sx={{ display: 'flex' }}>
       <AppBar position="fixed">
@@ -64,9 +100,12 @@ function App() {
           >
             <MenuIcon />
           </IconButton>
-          <Typography variant="h6" noWrap component="div">
+          <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
             NFL Pick'em
           </Typography>
+          <Button color="inherit" onClick={handleLogout}>
+            Logout
+          </Button>
         </Toolbar>
       </AppBar>
 
@@ -86,6 +125,20 @@ function App() {
               <ListItemText primary={item.text} />
             </ListItem>
           ))}
+          {user?.is_admin && (
+            <>
+              <Divider />
+              <ListItem button onClick={handleManualUpdate}>
+                <ListItemIcon><RefreshIcon /></ListItemIcon>
+                <ListItemText primary="Update Games" />
+              </ListItem>
+            </>
+          )}
+          <Divider />
+          <ListItem button onClick={handleLogout}>
+            <ListItemIcon><LogoutIcon /></ListItemIcon>
+            <ListItemText primary="Logout" />
+          </ListItem>
         </List>
       </Drawer>
 
@@ -99,49 +152,23 @@ function App() {
         }}
       >
         <Routes>
-          <Route
-            path="/"
-            element={
-              <PrivateRoute>
-                <Leaderboard />
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/picks"
-            element={
-              <PrivateRoute>
-                <WeeklyPicks />
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/stats"
-            element={
-              <PrivateRoute>
-                <Statistics />
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/settings"
-            element={
-              <PrivateRoute>
-                <Settings />
-              </PrivateRoute>
-            }
-          />
           <Route path="/login" element={<Login />} />
+          <Route path="/" element={<PrivateRoute><Leaderboard /></PrivateRoute>} />
+          <Route path="/picks" element={<PrivateRoute><WeeklyPicks /></PrivateRoute>} />
+          <Route path="/stats" element={<PrivateRoute><Statistics /></PrivateRoute>} />
+          <Route path="/settings" element={<PrivateRoute><Settings /></PrivateRoute>} />
         </Routes>
       </Box>
     </Box>
   );
 }
 
-export default function AppWithAuth() {
+function AppWithAuth() {
   return (
     <AuthProvider>
       <App />
     </AuthProvider>
   );
 }
+
+export default AppWithAuth;
