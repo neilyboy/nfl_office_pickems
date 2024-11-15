@@ -7,6 +7,7 @@ from sqlalchemy import case, func, distinct
 from .utils import require_admin, DatabaseManager
 from functools import wraps
 import logging
+import requests
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -455,3 +456,82 @@ def logout():
     logger.info(f'User logged out: {current_user.username}')
     logout_user()
     return jsonify({'success': True})
+
+@bp.route('/api/games/week/<int:week>')
+@auth_required
+def get_games_for_week(week):
+    try:
+        # Get current NFL season
+        current_year = datetime.now().year
+        # If we're in Jan-July, we're looking at the previous season
+        current_season = current_year - 1 if datetime.now().month < 8 else current_year
+        
+        games = Game.query.filter_by(week=week, season=current_season).all()
+        
+        if not games:
+            # Try to fetch games from ESPN API
+            try:
+                url = f"https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard"
+                params = {
+                    'week': week,
+                    'season': current_season,
+                    'seasontype': 2  # Regular season
+                }
+                response = requests.get(url, params=params)
+                response.raise_for_status()
+                data = response.json()
+                
+                if 'events' in data:
+                    for event in data['events']:
+                        # Skip if game already exists
+                        if Game.query.filter_by(espn_id=event['id']).first():
+                            continue
+                            
+                        competition = event['competitions'][0]
+                        home_team = None
+                        away_team = None
+                        
+                        for team in competition['competitors']:
+                            if team['homeAway'] == 'home':
+                                home_team = team['team']['abbreviation']
+                            else:
+                                away_team = team['team']['abbreviation']
+                        
+                        if home_team and away_team:
+                            start_time = datetime.strptime(competition['date'], "%Y-%m-%dT%H:%M:%SZ")
+                            new_game = Game(
+                                espn_id=event['id'],
+                                week=week,
+                                season=current_season,
+                                home_team=home_team,
+                                away_team=away_team,
+                                start_time=start_time,
+                                status='scheduled'
+                            )
+                            db.session.add(new_game)
+                    
+                    db.session.commit()
+                    # Fetch games again after adding new ones
+                    games = Game.query.filter_by(week=week, season=current_season).all()
+            
+            except Exception as e:
+                logger.error(f"Error fetching games from ESPN API: {str(e)}")
+        
+        return jsonify([{
+            'id': game.id,
+            'espn_id': game.espn_id,
+            'week': game.week,
+            'season': game.season,
+            'home_team': game.home_team,
+            'away_team': game.away_team,
+            'start_time': game.start_time.isoformat(),
+            'is_mnf': game.is_mnf,
+            'final_score_home': game.final_score_home,
+            'final_score_away': game.final_score_away,
+            'winner': game.winner,
+            'status': game.status
+        } for game in games])
+    
+    except Exception as e:
+        logger.error(f"Error getting games for week {week}: {str(e)}")
+        return jsonify({'error': str(e)}), 500

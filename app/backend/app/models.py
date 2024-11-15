@@ -1,6 +1,7 @@
 from app import db, bcrypt
 from flask_login import UserMixin
 from datetime import datetime
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey
 
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -34,11 +35,16 @@ class Game(db.Model):
     final_score_home = db.Column(db.Integer)
     final_score_away = db.Column(db.Integer)
     winner = db.Column(db.String(3))
+    status = db.Column(db.String(20), server_default='scheduled', nullable=False)
     picks = db.relationship('Pick', backref='game', lazy=True)
 
     @property
     def is_finished(self):
-        return self.winner is not None
+        return self.status == 'completed'
+
+    @property
+    def has_ended(self):
+        return self.status == 'completed'
 
 class Pick(db.Model):
     id = db.Column(db.Integer, primary_key=True)
