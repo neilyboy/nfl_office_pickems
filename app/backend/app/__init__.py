@@ -65,9 +65,13 @@ def create_app():
     scheduler = BackgroundScheduler()
     
     def update_games():
+        """Update game scores periodically"""
         with app.app_context():
-            from .game_updater import update_game_scores
-            update_game_scores()
+            try:
+                from .game_updater import update_game_scores
+                update_game_scores()
+            except Exception as e:
+                logger.error(f"Error in scheduled update_games: {str(e)}")
     
     scheduler.add_job(update_games, 'interval', minutes=5, id='update_games')
     scheduler.start()
