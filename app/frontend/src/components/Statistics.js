@@ -4,64 +4,37 @@ import {
   Card,
   CardContent,
   Typography,
-  Grid,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
   CircularProgress,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
+  Grid,
   Paper,
-  Divider
+  Alert
 } from '@mui/material';
 import axios from 'axios';
 
 export default function Statistics() {
-  const [selectedUser, setSelectedUser] = useState('');
-  const [users, setUsers] = useState([]);
-  const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [stats, setStats] = useState(null);
 
   useEffect(() => {
-    fetchUsers();
+    fetchStats();
   }, []);
 
-  useEffect(() => {
-    if (selectedUser) {
-      fetchUserStats();
-    }
-  }, [selectedUser]);
-
-  const fetchUsers = async () => {
-    try {
-      const response = await axios.get('/api/users');
-      setUsers(response.data);
-      if (response.data.length > 0) {
-        setSelectedUser(response.data[0].id);
-      }
-    } catch (error) {
-      console.error('Error fetching users:', error);
-    }
-  };
-
-  const fetchUserStats = async () => {
+  const fetchStats = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`/api/stats?user_id=${selectedUser}`);
+      setError(null);
+      const response = await axios.get('/api/stats');
       setStats(response.data);
       setLoading(false);
     } catch (error) {
-      console.error('Error fetching user stats:', error);
+      console.error('Error fetching stats:', error);
+      setError('Failed to load statistics. Please try again later.');
       setLoading(false);
     }
   };
 
-  if (!stats && loading) {
+  if (loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
         <CircularProgress />
@@ -69,139 +42,113 @@ export default function Statistics() {
     );
   }
 
+  if (error) {
+    return (
+      <Alert severity="error" sx={{ mt: 2 }}>
+        {error}
+      </Alert>
+    );
+  }
+
+  if (!stats) {
+    return (
+      <Typography color="textSecondary">
+        No statistics available yet.
+      </Typography>
+    );
+  }
+
   return (
     <Box sx={{ width: '100%' }}>
-      <FormControl fullWidth sx={{ mb: 3 }}>
-        <InputLabel>Select Player</InputLabel>
-        <Select
-          value={selectedUser}
-          label="Select Player"
-          onChange={(e) => setSelectedUser(e.target.value)}
-        >
-          {users.map((user) => (
-            <MenuItem key={user.id} value={user.id}>
-              {user.username}
-            </MenuItem>
-          ))}
-        </Select>
-      </FormControl>
-
-      {stats && (
-        <Grid container spacing={3}>
-          {/* Performance Overview Card */}
-          <Grid item xs={12}>
-            <Card>
-              <CardContent>
-                <Typography variant="h6" gutterBottom>
-                  Performance Overview
-                </Typography>
-                <Grid container spacing={2}>
-                  <Grid item xs={12} sm={4}>
-                    <Box sx={{ textAlign: 'center' }}>
-                      <Typography variant="h4" color="primary">
-                        {(stats.totalAccuracy * 100).toFixed(1)}%
-                      </Typography>
-                      <Typography variant="body2" color="textSecondary">
-                        Total Accuracy ({stats.totalCorrect}/{stats.totalPicks})
-                      </Typography>
-                    </Box>
-                  </Grid>
-                  <Grid item xs={12} sm={4}>
-                    <Box sx={{ textAlign: 'center' }}>
-                      <Typography variant="h4" color="primary">
-                        Week {stats.bestWeek.week}
-                      </Typography>
-                      <Typography variant="body2" color="textSecondary">
-                        Best Week ({stats.bestWeek.correct} correct)
-                      </Typography>
-                    </Box>
-                  </Grid>
-                  <Grid item xs={12} sm={4}>
-                    <Box sx={{ textAlign: 'center' }}>
-                      <Typography variant="h4" color="primary">
-                        {stats.averagePerWeek.toFixed(1)}
-                      </Typography>
-                      <Typography variant="body2" color="textSecondary">
-                        Average Correct Per Week
-                      </Typography>
-                    </Box>
-                  </Grid>
+      <Grid container spacing={3}>
+        <Grid item xs={12} md={6}>
+          <Card>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
+                Overall Performance
+              </Typography>
+              <Grid container spacing={2}>
+                <Grid item xs={6}>
+                  <Paper elevation={0} sx={{ p: 2, textAlign: 'center' }}>
+                    <Typography variant="h4" color="primary">
+                      {stats.total_correct || 0}
+                    </Typography>
+                    <Typography variant="body2" color="textSecondary">
+                      Correct Picks
+                    </Typography>
+                  </Paper>
                 </Grid>
-              </CardContent>
-            </Card>
-          </Grid>
-
-          {/* Weekly Performance Card */}
-          <Grid item xs={12} md={6}>
-            <Card>
-              <CardContent>
-                <Typography variant="h6" gutterBottom>
-                  Weekly Performance
-                </Typography>
-                <TableContainer>
-                  <Table size="small">
-                    <TableHead>
-                      <TableRow>
-                        <TableCell>Week</TableCell>
-                        <TableCell align="center">Correct</TableCell>
-                        <TableCell align="center">Total</TableCell>
-                        <TableCell align="center">Accuracy</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {stats.weeklyPerformance.map((week) => (
-                        <TableRow key={week.week}>
-                          <TableCell>Week {week.week}</TableCell>
-                          <TableCell align="center">{week.correct}</TableCell>
-                          <TableCell align="center">{week.total}</TableCell>
-                          <TableCell align="center">
-                            {((week.correct / week.total) * 100).toFixed(1)}%
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-              </CardContent>
-            </Card>
-          </Grid>
-
-          {/* Team Performance Card */}
-          <Grid item xs={12} md={6}>
-            <Card>
-              <CardContent>
-                <Typography variant="h6" gutterBottom>
-                  Team Performance
-                </Typography>
-                <TableContainer>
-                  <Table size="small">
-                    <TableHead>
-                      <TableRow>
-                        <TableCell>Team</TableCell>
-                        <TableCell align="center">Picks</TableCell>
-                        <TableCell align="center">Wins</TableCell>
-                        <TableCell align="center">Accuracy</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {stats.teamPerformance.map((team) => (
-                        <TableRow key={team.team}>
-                          <TableCell>{team.team}</TableCell>
-                          <TableCell align="center">{team.picks}</TableCell>
-                          <TableCell align="center">{team.wins}</TableCell>
-                          <TableCell align="center">
-                            {((team.wins / team.picks) * 100).toFixed(1)}%
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-              </CardContent>
-            </Card>
-          </Grid>
+                <Grid item xs={6}>
+                  <Paper elevation={0} sx={{ p: 2, textAlign: 'center' }}>
+                    <Typography variant="h4" color="primary">
+                      {stats.accuracy ? `${stats.accuracy.toFixed(1)}%` : '0%'}
+                    </Typography>
+                    <Typography variant="body2" color="textSecondary">
+                      Accuracy
+                    </Typography>
+                  </Paper>
+                </Grid>
+              </Grid>
+            </CardContent>
+          </Card>
         </Grid>
-      )}
+
+        <Grid item xs={12} md={6}>
+          <Card>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
+                Highlights
+              </Typography>
+              <Grid container spacing={2}>
+                <Grid item xs={6}>
+                  <Paper elevation={0} sx={{ p: 2, textAlign: 'center' }}>
+                    <Typography variant="h4" color="primary">
+                      {stats.best_week?.correct || 0}
+                    </Typography>
+                    <Typography variant="body2" color="textSecondary">
+                      Best Week (Week {stats.best_week?.week || '-'})
+                    </Typography>
+                  </Paper>
+                </Grid>
+                <Grid item xs={6}>
+                  <Paper elevation={0} sx={{ p: 2, textAlign: 'center' }}>
+                    <Typography variant="h4" color="primary">
+                      {stats.current_streak || 0}
+                    </Typography>
+                    <Typography variant="body2" color="textSecondary">
+                      Current Streak
+                    </Typography>
+                  </Paper>
+                </Grid>
+              </Grid>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        <Grid item xs={12}>
+          <Card>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
+                Weekly Performance
+              </Typography>
+              <Grid container spacing={2}>
+                {stats.weekly_stats?.map((week) => (
+                  <Grid item xs={12} sm={6} md={4} key={week.week}>
+                    <Paper elevation={0} sx={{ p: 2 }}>
+                      <Typography variant="subtitle1">
+                        Week {week.week}
+                      </Typography>
+                      <Typography>
+                        {week.correct}/{week.total} ({(week.accuracy || 0).toFixed(1)}%)
+                      </Typography>
+                    </Paper>
+                  </Grid>
+                ))}
+              </Grid>
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
     </Box>
   );
 }

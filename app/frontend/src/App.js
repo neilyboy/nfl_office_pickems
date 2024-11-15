@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { Box, AppBar, Toolbar, IconButton, Typography, Drawer, List, ListItem, ListItemIcon, ListItemText } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import LeaderboardIcon from '@mui/icons-material/Leaderboard';
@@ -36,6 +36,7 @@ function PrivateRoute({ children }) {
 function App() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const { isAuthenticated, user } = useAuth();
+  const navigate = useNavigate();
 
   const toggleDrawer = () => {
     setDrawerOpen(!drawerOpen);
@@ -44,6 +45,11 @@ function App() {
   if (!isAuthenticated) {
     return <Login />;
   }
+
+  const handleNavigation = (path) => {
+    navigate(path);
+    toggleDrawer();
+  };
 
   return (
     <Box sx={{ display: 'flex' }}>
@@ -74,10 +80,7 @@ function App() {
             <ListItem
               button
               key={item.text}
-              onClick={() => {
-                toggleDrawer();
-                // Add navigation logic here
-              }}
+              onClick={() => handleNavigation(item.path)}
             >
               <ListItemIcon>{item.icon}</ListItemIcon>
               <ListItemText primary={item.text} />

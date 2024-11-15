@@ -342,45 +342,79 @@ def weekly_leaderboard():
 
 @bp.route('/api/stats', methods=['GET'])
 @auth_required
-def stats():
-    user_id = request.args.get('user_id', type=int) or current_user.id
+def get_user_stats():
+    if not current_user.is_authenticated:
+        return jsonify({'error': 'Not authenticated'}), 401
+
+    # Get all picks for the current user
+    picks = Pick.query.filter_by(user_id=current_user.id).all()
     
-    # Get user's picks
-    picks_query = db.session.query(
-        Pick.week,
-        func.count(case([(Pick.picked_team == Game.winner, 1)])).label('correct_picks'),
-        func.count(Pick.id).label('total_picks')
-    ).join(Game).filter(Pick.user_id == user_id).group_by(Pick.week)
-    
-    picks_results = picks_query.all()
-    
-    # Calculate weekly and overall stats
+    if not picks:
+        return jsonify({
+            'total_correct': 0,
+            'accuracy': 0,
+            'best_week': None,
+            'current_streak': 0,
+            'weekly_stats': []
+        })
+
+    # Group picks by week
+    picks_by_week = {}
+    for pick in picks:
+        week = pick.week
+        if week not in picks_by_week:
+            picks_by_week[week] = {'correct': 0, 'total': 0}
+        
+        picks_by_week[week]['total'] += 1
+        if pick.picked_team == Game.winner:
+            picks_by_week[week]['correct'] += 1
+
+    # Calculate weekly stats
     weekly_stats = []
     total_correct = 0
     total_picks = 0
+    best_week = {'week': None, 'correct': 0}
     
-    for week, correct_picks, total_week_picks in picks_results:
-        accuracy = (correct_picks / total_week_picks * 100) if total_week_picks > 0 else 0
+    for week, stats in picks_by_week.items():
+        correct = stats['correct']
+        total = stats['total']
+        accuracy = (correct / total * 100) if total > 0 else 0
+        
         weekly_stats.append({
             'week': week,
-            'correct_picks': correct_picks,
-            'total_picks': total_week_picks,
-            'accuracy': round(accuracy, 2)
+            'correct': correct,
+            'total': total,
+            'accuracy': accuracy
         })
-        total_correct += correct_picks
-        total_picks += total_week_picks
-    
-    # Calculate overall accuracy
-    overall_accuracy = (total_correct / total_picks * 100) if total_picks > 0 else 0
-    
-    logger.info(f'Stats retrieved for user: {current_user.username}')
+        
+        total_correct += correct
+        total_picks += total
+        
+        if correct > best_week['correct']:
+            best_week = {'week': week, 'correct': correct}
+
+    # Calculate current streak
+    current_streak = 0
+    recent_picks = Pick.query.join(Game).filter(
+        Pick.user_id == current_user.id,
+        Game.has_ended == True
+    ).order_by(Game.start_time.desc()).all()
+
+    for pick in recent_picks:
+        if pick.picked_team == Game.winner:
+            current_streak += 1
+        else:
+            break
+
+    # Sort weekly stats by week number
+    weekly_stats.sort(key=lambda x: x['week'])
+
     return jsonify({
-        'weekly_stats': weekly_stats,
-        'overall_stats': {
-            'correct_picks': total_correct,
-            'total_picks': total_picks,
-            'accuracy': round(overall_accuracy, 2)
-        }
+        'total_correct': total_correct,
+        'accuracy': (total_correct / total_picks * 100) if total_picks > 0 else 0,
+        'best_week': best_week,
+        'current_streak': current_streak,
+        'weekly_stats': weekly_stats
     })
 
 @bp.route('/api/get_picks')
