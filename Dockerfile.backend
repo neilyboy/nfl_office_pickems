@@ -8,8 +8,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Set working directory
 WORKDIR /app
 
-# Create necessary directories
-RUN mkdir -p /data /logs
+# Create necessary directories with proper permissions
+RUN mkdir -p /app/data /app/logs /app/backups \
+    && chown -R 1000:1000 /app
 
 # Copy requirements first for better caching
 COPY requirements.txt .
@@ -23,9 +24,11 @@ ENV PYTHONPATH=/app/backend
 ENV PYTHONUNBUFFERED=1
 ENV FLASK_APP=app:create_app()
 ENV FLASK_ENV=production
+ENV DATABASE_URL=sqlite:////app/data/nfl_pickems.db
 
 # Create non-root user
-RUN useradd -m appuser && chown -R appuser:appuser /app /data /logs
+RUN useradd -u 1000 -m appuser \
+    && chown -R appuser:appuser /app
 USER appuser
 
 # Run gunicorn
