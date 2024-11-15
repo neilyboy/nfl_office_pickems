@@ -76,12 +76,64 @@ LOGIN_ATTEMPT_TIMEOUT=300  # seconds
 REACT_APP_API_URL=http://localhost:5000
 ```
 
+## Quick Start (Docker)
+
+The fastest way to get the application running:
+
+```bash
+# Clone the repository
+git clone https://github.com/neilyboy/nfl_office_pickems.git
+cd nfl_office_pickems
+
+# Create environment file
+cp .env.example .env
+# Edit .env with your settings
+
+# Start the application
+docker-compose up -d
+
+# The application will be available at:
+# Frontend: http://localhost:3000
+# Backend API: http://localhost:5000
+```
+
+## Directory Structure
+
+```
+.
+├── app/                    # Application code
+│   ├── backend/           # Flask backend
+│   └── frontend/          # React frontend
+├── data/                  # Database and persistent data
+├── logs/                  # Application logs
+├── docker-compose.yml     # Docker composition
+├── Dockerfile.backend     # Backend container definition
+├── Dockerfile.frontend    # Frontend container definition
+├── requirements.txt       # Python dependencies
+└── .env.example          # Environment template
+```
+
+## Deployment Prerequisites
+
+Before deploying, ensure you have:
+
+1. Docker and Docker Compose installed
+2. Git installed
+3. Proper network access for ports 3000 and 5000
+4. At least 1GB of free disk space
+5. Copy of `.env.example` to `.env` with your configuration
+
+Common deployment issues:
+- If the frontend can't connect to the backend, check REACT_APP_API_URL in your .env
+- If you see database errors, ensure the data directory is writable
+- For permission issues, check that the directories data/ and logs/ exist and are writable
+
 ## Local Development Setup
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/neilyboy/nfl-pickems-test.git
-cd nfl-pickems-test
+git clone https://github.com/neilyboy/nfl_office_pickems.git
+cd nfl_office_pickems
 ```
 
 2. Set up the backend:
@@ -138,8 +190,8 @@ sudo usermod -aG docker $USER
 3. Application Setup:
 ```bash
 # Clone repository
-git clone https://github.com/neilyboy/nfl-pickems-test.git
-cd nfl-pickems-test
+git clone https://github.com/neilyboy/nfl_office_pickems.git
+cd nfl_office_pickems
 
 # Create necessary directories
 mkdir -p data logs
@@ -179,8 +231,8 @@ sudo apt install nginx
 2. Application setup:
 ```bash
 # Clone and setup
-git clone https://github.com/neilyboy/nfl-pickems-test.git
-cd nfl-pickems-test
+git clone https://github.com/neilyboy/nfl_office_pickems.git
+cd nfl_office_pickems
 
 # Backend setup
 python3.11 -m venv venv
