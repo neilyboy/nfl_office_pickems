@@ -1,11 +1,10 @@
-from flask import Blueprint, jsonify, request, send_file
+from flask import Blueprint, jsonify, request, send_file, current_app
 from flask_login import current_user, login_user, logout_user
 from . import db, bcrypt, User, Game, Pick, login_manager
 from datetime import datetime, timedelta
 import json
 from sqlalchemy import case, func
-from .utils import require_admin
-from . import db_manager
+from .utils import require_admin, DatabaseManager
 from functools import wraps
 import logging
 
@@ -205,7 +204,7 @@ def manage_users():
 @require_admin
 def create_backup():
     try:
-        backup_path = db_manager.create_backup()
+        backup_path = DatabaseManager.create_backup()
         logger.info(f'Backup created by admin: {current_user.username}, path: {backup_path}')
         return jsonify({
             'success': True,
@@ -233,7 +232,7 @@ def restore_backup():
         }), 400
     
     try:
-        db_manager.restore_backup(backup_path)
+        DatabaseManager.restore_backup(backup_path)
         logger.info(f'Backup restored by admin: {current_user.username}, path: {backup_path}')
         return jsonify({'success': True})
     except Exception as e:
@@ -248,7 +247,7 @@ def restore_backup():
 @require_admin
 def list_backups():
     try:
-        backups = db_manager.list_backups()
+        backups = DatabaseManager.list_backups()
         logger.info(f'Backups listed by admin: {current_user.username}')
         return jsonify({
             'success': True,
