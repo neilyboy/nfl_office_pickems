@@ -12,11 +12,15 @@ def get_espn_game_data(game_id):
     """
     try:
         url = f"https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard/{game_id}"
+        logger.info(f"Fetching game data from ESPN API: {url}")
         response = requests.get(url)
         response.raise_for_status()
-        return response.json()
+        data = response.json()
+        logger.info(f"Successfully fetched data for game {game_id}")
+        return data
     except requests.RequestException as e:
         logger.error(f"Error fetching ESPN data for game {game_id}: {str(e)}")
+        logger.exception(e)
         return None
 
 def parse_game_status(espn_data):
@@ -80,6 +84,8 @@ def update_game_scores():
         updates_made = False
         
         for game in games:
+            logger.info(f"Processing game: {game.home_team} vs {game.away_team} (ESPN ID: {game.espn_id})")
+            
             # Update game status based on start time
             if game.status == 'scheduled' and current_time >= game.start_time:
                 game.status = 'in_progress'
@@ -90,22 +96,24 @@ def update_game_scores():
             espn_data = get_espn_game_data(game.espn_id)
             if espn_data:
                 status, home_score, away_score, winner = parse_game_status(espn_data)
+                logger.info(f"Parsed game data - Status: {status}, Score: {home_score}-{away_score}, Winner: {winner}")
                 
                 if status and status != game.status:
+                    logger.info(f"Updating game status from {game.status} to {status}")
                     game.status = status
                     updates_made = True
                 
                 if home_score is not None and away_score is not None:
                     if game.final_score_home != home_score or game.final_score_away != away_score:
+                        logger.info(f"Updating scores from {game.final_score_home}-{game.final_score_away} to {home_score}-{away_score}")
                         game.final_score_home = home_score
                         game.final_score_away = away_score
                         updates_made = True
-                        logger.info(f"Updated scores for {game.home_team} vs {game.away_team}: {home_score}-{away_score}")
                 
                 if winner and game.winner != winner:
+                    logger.info(f"Setting winner to {winner}")
                     game.winner = winner
                     updates_made = True
-                    logger.info(f"Game completed: {game.home_team} vs {game.away_team}, Winner: {winner}")
 
         # Only commit if we made changes
         if updates_made:
@@ -116,4 +124,5 @@ def update_game_scores():
 
     except Exception as e:
         logger.error(f"Error updating game scores: {str(e)}")
+        logger.exception(e)
         db.session.rollback()

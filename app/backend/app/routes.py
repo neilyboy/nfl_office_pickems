@@ -466,25 +466,35 @@ def get_games_for_week(week):
         # If we're in Jan-July, we're looking at the previous season
         current_season = current_year - 1 if datetime.now().month < 8 else current_year
         
+        logger.info(f"Fetching games for week {week} of {current_season} season")
+        
         games = Game.query.filter_by(week=week, season=current_season).all()
+        logger.info(f"Found {len(games)} existing games in database")
         
         if not games:
             # Try to fetch games from ESPN API
             try:
                 url = f"https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard"
                 params = {
-                    'week': week,
-                    'season': current_season,
+                    'limit': 100,
+                    'dates': current_season,
+                    'week': str(week),
                     'seasontype': 2  # Regular season
                 }
+                logger.info(f"Fetching games from ESPN API: {url} with params {params}")
+                
                 response = requests.get(url, params=params)
                 response.raise_for_status()
                 data = response.json()
                 
+                logger.info(f"ESPN API Response: {data}")
+                
                 if 'events' in data:
+                    logger.info(f"Found {len(data['events'])} games from ESPN API")
                     for event in data['events']:
                         # Skip if game already exists
                         if Game.query.filter_by(espn_id=event['id']).first():
+                            logger.info(f"Game {event['id']} already exists, skipping")
                             continue
                             
                         competition = event['competitions'][0]
@@ -509,15 +519,20 @@ def get_games_for_week(week):
                                 status='scheduled'
                             )
                             db.session.add(new_game)
+                            logger.info(f"Added new game: {home_team} vs {away_team}")
                     
                     db.session.commit()
+                    logger.info("Successfully saved new games to database")
                     # Fetch games again after adding new ones
                     games = Game.query.filter_by(week=week, season=current_season).all()
+                else:
+                    logger.warning("No events found in ESPN API response")
             
             except Exception as e:
                 logger.error(f"Error fetching games from ESPN API: {str(e)}")
+                logger.exception(e)
         
-        return jsonify([{
+        game_data = [{
             'id': game.id,
             'espn_id': game.espn_id,
             'week': game.week,
@@ -530,8 +545,12 @@ def get_games_for_week(week):
             'final_score_away': game.final_score_away,
             'winner': game.winner,
             'status': game.status
-        } for game in games])
+        } for game in games]
+        
+        logger.info(f"Returning {len(game_data)} games")
+        return jsonify(game_data)
     
     except Exception as e:
         logger.error(f"Error getting games for week {week}: {str(e)}")
+        logger.exception(e)
         return jsonify({'error': str(e)}), 500
