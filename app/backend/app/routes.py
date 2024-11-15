@@ -3,7 +3,7 @@ from flask_login import current_user, login_user, logout_user
 from . import db, bcrypt, User, Game, Pick, login_manager
 from datetime import datetime, timedelta
 import json
-from sqlalchemy import case, func
+from sqlalchemy import case, func, distinct
 from .utils import require_admin, DatabaseManager
 from functools import wraps
 import logging
@@ -296,6 +296,85 @@ def leaderboard():
     
     logger.info(f'Leaderboard retrieved for user: {current_user.username}')
     return jsonify({'leaderboard': leaderboard})
+
+@bp.route('/api/leaderboard/season', methods=['GET'])
+@auth_required
+def season_leaderboard():
+    try:
+        # Get all picks for the season
+        picks_query = db.session.query(
+            Pick.user_id,
+            func.count(case([(Pick.picked_team == Game.winner, 1)])).label('correct_picks'),
+            func.count(Pick.id).label('total_picks'),
+            func.count(distinct(Pick.week)).label('weeks_played')
+        ).join(Game)
+        
+        picks_query = picks_query.group_by(Pick.user_id)
+        picks_results = picks_query.all()
+        
+        # Calculate accuracy and create leaderboard
+        leaderboard = []
+        for user_id, correct_picks, total_picks, weeks_played in picks_results:
+            user = User.query.get(user_id)
+            accuracy = (correct_picks / total_picks * 100) if total_picks > 0 else 0
+            leaderboard.append({
+                'id': user.id,
+                'username': user.username,
+                'correct': correct_picks,
+                'total': total_picks,
+                'weekly_wins': 0,  # TODO: Implement weekly wins calculation
+                'streak': 0,  # TODO: Implement streak calculation
+                'accuracy': round(accuracy, 2)
+            })
+        
+        # Sort by correct picks (descending) and username (ascending)
+        leaderboard.sort(key=lambda x: (-x['correct'], x['username']))
+        
+        logger.info(f'Season leaderboard retrieved for user: {current_user.username}')
+        return jsonify(leaderboard)
+    except Exception as e:
+        logger.error(f'Error retrieving season leaderboard: {str(e)}')
+        return jsonify([])
+
+@bp.route('/api/leaderboard/weekly', methods=['GET'])
+@auth_required
+def weekly_leaderboard():
+    try:
+        week = request.args.get('week', type=int)
+        if week is None:
+            return jsonify([])
+        
+        # Get all picks for the specified week
+        picks_query = db.session.query(
+            Pick.user_id,
+            func.count(case([(Pick.picked_team == Game.winner, 1)])).label('correct_picks'),
+            func.count(Pick.id).label('total_picks')
+        ).join(Game).filter(Pick.week == week)
+        
+        picks_query = picks_query.group_by(Pick.user_id)
+        picks_results = picks_query.all()
+        
+        # Calculate accuracy and create leaderboard
+        leaderboard = []
+        for user_id, correct_picks, total_picks in picks_results:
+            user = User.query.get(user_id)
+            accuracy = (correct_picks / total_picks * 100) if total_picks > 0 else 0
+            leaderboard.append({
+                'id': user.id,
+                'username': user.username,
+                'correct': correct_picks,
+                'total': total_picks,
+                'accuracy': round(accuracy, 2)
+            })
+        
+        # Sort by correct picks (descending) and username (ascending)
+        leaderboard.sort(key=lambda x: (-x['correct'], x['username']))
+        
+        logger.info(f'Weekly leaderboard retrieved for week {week} by user: {current_user.username}')
+        return jsonify(leaderboard)
+    except Exception as e:
+        logger.error(f'Error retrieving weekly leaderboard: {str(e)}')
+        return jsonify([])
 
 @bp.route('/api/stats', methods=['GET'])
 @auth_required
