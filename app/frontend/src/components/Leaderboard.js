@@ -99,27 +99,37 @@ export default function Leaderboard() {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {seasonData.map((player, index) => (
-                    <TableRow key={player.id}>
-                      <TableCell>{index + 1}</TableCell>
-                      <TableCell>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <Avatar sx={{ width: 24, height: 24 }}>{player.username[0]}</Avatar>
-                          {player.username}
-                        </Box>
+                  {seasonData.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} align="center">
+                        <Typography variant="body2" color="textSecondary">
+                          No picks have been made yet. Start playing to see the leaderboard!
+                        </Typography>
                       </TableCell>
-                      <TableCell align="center">{player.correctPicks}</TableCell>
-                      <TableCell align="center">{player.weeklyWins}</TableCell>
-                      <TableCell align="center">
-                        <Chip
-                          label={`${player.streak} W`}
-                          color={player.streak > 0 ? "success" : "default"}
-                          size="small"
-                        />
-                      </TableCell>
-                      <TableCell align="center">{`${(player.accuracy * 100).toFixed(1)}%`}</TableCell>
                     </TableRow>
-                  ))}
+                  ) : (
+                    seasonData.map((player, index) => (
+                      <TableRow key={player.id}>
+                        <TableCell>{index + 1}</TableCell>
+                        <TableCell>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Avatar sx={{ width: 24, height: 24 }}>{player.username[0]}</Avatar>
+                            {player.username}
+                          </Box>
+                        </TableCell>
+                        <TableCell align="center">{player.correct}</TableCell>
+                        <TableCell align="center">{player.weekly_wins || 0}</TableCell>
+                        <TableCell align="center">
+                          <Chip
+                            label={`${player.streak || 0} W`}
+                            color={player.streak > 0 ? "success" : "default"}
+                            size="small"
+                          />
+                        </TableCell>
+                        <TableCell align="center">{`${player.accuracy.toFixed(1)}%`}</TableCell>
+                      </TableRow>
+                    ))
+                  )}
                 </TableBody>
               </Table>
             </TableContainer>
@@ -140,31 +150,35 @@ export default function Leaderboard() {
                     <TableCell>Rank</TableCell>
                     <TableCell>Player</TableCell>
                     <TableCell align="center">Correct</TableCell>
-                    <TableCell align="center">MNF Points</TableCell>
-                    <TableCell align="center">Status</TableCell>
+                    <TableCell align="center">Total</TableCell>
+                    <TableCell align="center">Accuracy</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {weeklyData.map((player, index) => (
-                    <TableRow key={player.id}>
-                      <TableCell>{index + 1}</TableCell>
-                      <TableCell>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <Avatar sx={{ width: 24, height: 24 }}>{player.username[0]}</Avatar>
-                          {player.username}
-                        </Box>
-                      </TableCell>
-                      <TableCell align="center">{player.weeklyCorrect}</TableCell>
-                      <TableCell align="center">{player.mnfPrediction}</TableCell>
-                      <TableCell align="center">
-                        <Chip
-                          label={player.status}
-                          color={player.status === 'Winner' ? 'success' : 'default'}
-                          size="small"
-                        />
+                  {weeklyData.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={5} align="center">
+                        <Typography variant="body2" color="textSecondary">
+                          No picks have been made for Week {currentWeek} yet.
+                        </Typography>
                       </TableCell>
                     </TableRow>
-                  ))}
+                  ) : (
+                    weeklyData.map((player, index) => (
+                      <TableRow key={player.id}>
+                        <TableCell>{index + 1}</TableCell>
+                        <TableCell>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Avatar sx={{ width: 24, height: 24 }}>{player.username[0]}</Avatar>
+                            {player.username}
+                          </Box>
+                        </TableCell>
+                        <TableCell align="center">{player.correct}</TableCell>
+                        <TableCell align="center">{player.total}</TableCell>
+                        <TableCell align="center">{`${player.accuracy.toFixed(1)}%`}</TableCell>
+                      </TableRow>
+                    ))
+                  )}
                 </TableBody>
               </Table>
             </TableContainer>
