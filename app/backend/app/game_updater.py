@@ -70,10 +70,9 @@ def update_game_scores():
     This function is called every 5 minutes by the scheduler.
     """
     try:
-        # Get all games that haven't been completed yet
-        games = Game.query.filter(
-            Game.status.in_(['scheduled', 'in_progress'])
-        ).all()
+        # Get all games that haven't been completed yet using column attribute
+        active_statuses = ['scheduled', 'in_progress']
+        games = Game.query.filter(Game.__table__.c.status.in_(active_statuses)).all()
         
         if not games:
             logger.info("No active games to update")
