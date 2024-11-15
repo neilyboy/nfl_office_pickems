@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  backend:
+    build: 
+      context: .
+      dockerfile: Dockerfile.backend
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./app:/app
+      - ./data:/data
+      - ./logs:/logs
+    environment:
+      - FLASK_ENV=production
+      - FLASK_APP=backend/app.py
+      - SECRET_KEY=${SECRET_KEY:-default_dev_key}
+      - DATABASE_URL=sqlite:///data/nfl_pickems.db
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./app/frontend:/app
+    environment:
+      - NODE_ENV=production
+      - REACT_APP_API_URL=http://localhost:5000
+    depends_on:
+      - backend
+    restart: unless-stopped

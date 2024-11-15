@@ -1,0 +1,9 @@
+@echo off
+echo Creating remote directory...
+ssh neil@192.168.1.158 "rm -rf ~/nfl-pickems-test && mkdir ~/nfl-pickems-test"
+
+echo Copying project files...
+scp -r app requirements.txt pytest.ini test_data neil@192.168.1.158:~/nfl-pickems-test/
+
+echo Setting up Python environment and running tests...
+ssh neil@192.168.1.158 "cd ~/nfl-pickems-test && python3 -m venv venv && source venv/bin/activate && pip install -r requirements.txt && python -m pytest app/backend/tests -v"

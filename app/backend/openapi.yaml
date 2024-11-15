@@ -1,0 +1,348 @@
+openapi: 3.0.3
+info:
+  title: NFL Pick'em Pool API
+  description: API for managing NFL pick'em pool predictions and user management
+  version: 1.0.0
+servers:
+  - url: http://localhost:5000
+    description: Development server
+
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: session
+
+  schemas:
+    User:
+      type: object
+      properties:
+        username:
+          type: string
+        is_admin:
+          type: boolean
+        first_login:
+          type: boolean
+
+    Game:
+      type: object
+      properties:
+        id:
+          type: integer
+        espn_id:
+          type: string
+        week:
+          type: integer
+        home_team:
+          type: string
+        away_team:
+          type: string
+        start_time:
+          type: string
+          format: date-time
+        is_mnf:
+          type: boolean
+        final_score_home:
+          type: integer
+          nullable: true
+        final_score_away:
+          type: integer
+          nullable: true
+        winner:
+          type: string
+          nullable: true
+
+    Pick:
+      type: object
+      properties:
+        game_id:
+          type: integer
+        picked_team:
+          type: string
+        mnf_total_points:
+          type: integer
+          nullable: true
+
+    LeaderboardEntry:
+      type: object
+      properties:
+        username:
+          type: string
+        total_picks:
+          type: integer
+        correct_picks:
+          type: integer
+        accuracy:
+          type: number
+          format: float
+
+    WeeklyStat:
+      type: object
+      properties:
+        week:
+          type: integer
+        total_picks:
+          type: integer
+        correct_picks:
+          type: integer
+        accuracy:
+          type: number
+          format: float
+
+    TeamStat:
+      type: object
+      properties:
+        team:
+          type: string
+        total_picks:
+          type: integer
+        correct_picks:
+          type: integer
+        accuracy:
+          type: number
+          format: float
+
+paths:
+  /api/login:
+    post:
+      summary: Authenticate user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username:
+                  type: string
+                password:
+                  type: string
+              required:
+                - username
+                - password
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  is_admin:
+                    type: boolean
+                  first_login:
+                    type: boolean
+
+  /api/change_password:
+    post:
+      summary: Change user password
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                new_password:
+                  type: string
+              required:
+                - new_password
+      responses:
+        '200':
+          description: Password changed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+
+  /api/picks:
+    get:
+      summary: Get user's picks for a specific week
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: week
+          in: query
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: User's picks retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  picks:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Pick'
+
+    post:
+      summary: Submit picks for a week
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                week:
+                  type: integer
+                picks:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/Pick'
+              required:
+                - week
+                - picks
+      responses:
+        '200':
+          description: Picks submitted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+
+  /api/leaderboard:
+    get:
+      summary: Get leaderboard standings
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: week
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Leaderboard retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  leaderboard:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/LeaderboardEntry'
+
+  /api/stats:
+    get:
+      summary: Get user statistics
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: user_id
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Statistics retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  weekly_stats:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/WeeklyStat'
+                  team_stats:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/TeamStat'
+
+  /api/admin/backup:
+    post:
+      summary: Create database backup
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Backup created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  backup_path:
+                    type: string
+
+  /api/admin/restore:
+    post:
+      summary: Restore database from backup
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                backup_path:
+                  type: string
+              required:
+                - backup_path
+      responses:
+        '200':
+          description: Database restored successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+
+  /api/admin/backups:
+    get:
+      summary: List available database backups
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Backups listed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  backups:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        filename:
+                          type: string
+                        path:
+                          type: string
+                        created_at:
+                          type: string
+                          format: date-time
+                        size:
+                          type: integer
