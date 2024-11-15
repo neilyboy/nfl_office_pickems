@@ -258,39 +258,8 @@ def list_backups():
 @bp.route('/api/leaderboard', methods=['GET'])
 @auth_required
 def leaderboard():
-    week = request.args.get('week', type=int)
-    
-    # Get all picks for the week
-    picks_query = db.session.query(
-        Pick.user_id,
-        func.count(case([(Pick.picked_team == Game.winner, 1)])).label('correct_picks'),
-        func.count(Pick.id).label('total_picks')
-    ).join(Game).filter(Pick.week == week)
-    
-    if week is None:
-        picks_query = picks_query.group_by(Pick.user_id)
-    else:
-        picks_query = picks_query.filter(Pick.week == week).group_by(Pick.user_id)
-    
-    picks_results = picks_query.all()
-    
-    # Calculate accuracy and create leaderboard
-    leaderboard = []
-    for user_id, correct_picks, total_picks in picks_results:
-        user = User.query.get(user_id)
-        accuracy = (correct_picks / total_picks * 100) if total_picks > 0 else 0
-        leaderboard.append({
-            'username': user.username,
-            'correct_picks': correct_picks,
-            'total_picks': total_picks,
-            'accuracy': round(accuracy, 2)
-        })
-    
-    # Sort by correct picks (descending) and username (ascending)
-    leaderboard.sort(key=lambda x: (-x['correct_picks'], x['username']))
-    
-    logger.info(f'Leaderboard retrieved for user: {current_user.username}')
-    return jsonify({'leaderboard': leaderboard})
+    """Legacy endpoint - redirects to season leaderboard"""
+    return season_leaderboard()
 
 @bp.route('/api/leaderboard/season', methods=['GET'])
 @auth_required

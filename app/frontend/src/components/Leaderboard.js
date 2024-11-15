@@ -44,8 +44,13 @@ export default function Leaderboard() {
         axios.get('/api/leaderboard/season'),
         axios.get(`/api/leaderboard/weekly?week=${currentWeek}`)
       ]);
-      setSeasonData(seasonResponse.data);
-      setWeeklyData(weeklyResponse.data);
+
+      // Ensure we have arrays
+      const seasonData = Array.isArray(seasonResponse.data) ? seasonResponse.data : [];
+      const weeklyData = Array.isArray(weeklyResponse.data) ? weeklyResponse.data : [];
+
+      setSeasonData(seasonData);
+      setWeeklyData(weeklyData);
       setLoading(false);
     } catch (error) {
       console.error('Error fetching leaderboard data:', error);
