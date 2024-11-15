@@ -16,11 +16,12 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
-COPY ./app/backend /app
+COPY ./app /app
 
 # Set environment variables
+ENV PYTHONPATH=/app
 ENV PYTHONUNBUFFERED=1
-ENV FLASK_APP=app
+ENV FLASK_APP=backend.app
 ENV FLASK_ENV=production
 
 # Create non-root user
@@ -28,4 +29,4 @@ RUN useradd -m appuser && chown -R appuser:appuser /app /data /logs
 USER appuser
 
 # Run gunicorn
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "4", "--timeout", "120", "app:create_app()"]
+CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "4", "--timeout", "120", "backend.app:app"]

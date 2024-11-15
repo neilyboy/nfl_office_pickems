@@ -1,13 +1,28 @@
-FROM node:18-alpine
+FROM node:18-alpine as build
 
 WORKDIR /app
 
+# Copy package files
 COPY ./app/frontend/package*.json ./
 
-RUN npm install
+# Install dependencies with legacy peer deps flag to avoid React issues
+RUN npm install --legacy-peer-deps
 
+# Copy the rest of the application
 COPY ./app/frontend .
+
+# Build the application
+RUN npm run build
+
+# Production environment
+FROM node:18-alpine
+WORKDIR /app
+COPY --from=build /app/build ./build
+
+# Install serve
+RUN npm install -g serve
 
 EXPOSE 3000
 
-CMD ["npm", "start"]
+# Use serve to run the built application
+CMD ["serve", "-s", "build", "-l", "3000"]
