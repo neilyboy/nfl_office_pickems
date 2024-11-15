@@ -93,52 +93,52 @@ def create_app():
             db.session.commit()
             logger.info('Created default admin user')
         
-        # Add sample games if none exist
-        if not Game.query.first():
-            # Current week's games
-            sample_games = [
-                Game(
-                    espn_id='401547959',
-                    week=11,
-                    season=2023,
-                    home_team='BAL',
-                    away_team='CIN',
-                    start_time=datetime(2023, 11, 16, 20, 15),  # Thursday night game
-                    is_mnf=False
-                ),
-                Game(
-                    espn_id='401547960',
-                    week=11,
-                    season=2023,
-                    home_team='CLE',
-                    away_team='PIT',
-                    start_time=datetime(2023, 11, 19, 13, 0),
-                    is_mnf=False
-                ),
-                Game(
-                    espn_id='401547961',
-                    week=11,
-                    season=2023,
-                    home_team='GB',
-                    away_team='LAC',
-                    start_time=datetime(2023, 11, 19, 13, 0),
-                    is_mnf=False
-                ),
-                Game(
-                    espn_id='401547968',
-                    week=11,
-                    season=2023,
-                    home_team='PHI',
-                    away_team='KC',
-                    start_time=datetime(2023, 11, 20, 20, 15),  # Monday night game
-                    is_mnf=True
-                )
-            ]
-            
-            for game in sample_games:
-                db.session.add(game)
-            db.session.commit()
-            logger.info('Added sample NFL games for week 11')
+        # Temporarily comment out sample game creation
+        # if not Game.query.first():
+        #     # Current week's games
+        #     sample_games = [
+        #         Game(
+        #             espn_id='401547959',
+        #             week=11,
+        #             season=2023,
+        #             home_team='BAL',
+        #             away_team='CIN',
+        #             start_time=datetime(2023, 11, 16, 20, 15),  # Thursday night game
+        #             is_mnf=False
+        #         ),
+        #         Game(
+        #             espn_id='401547960',
+        #             week=11,
+        #             season=2023,
+        #             home_team='CLE',
+        #             away_team='PIT',
+        #             start_time=datetime(2023, 11, 19, 13, 0),
+        #             is_mnf=False
+        #         ),
+        #         Game(
+        #             espn_id='401547961',
+        #             week=11,
+        #             season=2023,
+        #             home_team='GB',
+        #             away_team='LAC',
+        #             start_time=datetime(2023, 11, 19, 13, 0),
+        #             is_mnf=False
+        #         ),
+        #         Game(
+        #             espn_id='401547968',
+        #             week=11,
+        #             season=2023,
+        #             home_team='PHI',
+        #             away_team='KC',
+        #             start_time=datetime(2023, 11, 20, 20, 15),  # Monday night game
+        #             is_mnf=True
+        #         )
+        #     ]
+        #     
+        #     for game in sample_games:
+        #         db.session.add(game)
+        #     db.session.commit()
+        #     logger.info('Added sample NFL games for week 11')
     
     return app
 
