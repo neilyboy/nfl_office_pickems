@@ -80,6 +80,7 @@ def create_app():
         if not User.query.filter_by(username='admin').first():
             admin = User(
                 username='admin',
+                email='admin@example.com',
                 password_hash=bcrypt.generate_password_hash('admin'),
                 is_admin=True,
                 first_login=True
