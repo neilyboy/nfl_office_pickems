@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../axios';
 
 const AuthContext = createContext(null);
 
@@ -12,7 +12,6 @@ export const AuthProvider = ({ children }) => {
     // Check if user is already logged in
     const token = localStorage.getItem('token');
     if (token) {
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
       // Verify token and get user data
       checkAuth();
     } else {
@@ -22,12 +21,12 @@ export const AuthProvider = ({ children }) => {
 
   const checkAuth = async () => {
     try {
-      const response = await axios.get('/api/verify-token');
+      const response = await api.get('/api/auth/verify-token');
       setUser(response.data.user);
       setIsAuthenticated(true);
     } catch (error) {
+      console.error('Auth check failed:', error);
       localStorage.removeItem('token');
-      delete axios.defaults.headers.common['Authorization'];
     } finally {
       setIsLoading(false);
     }
@@ -35,31 +34,36 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (username, password) => {
     try {
-      const response = await axios.post('/api/login', { username, password });
+      const response = await api.post('/api/auth/login', { username, password });
       const { token, user } = response.data;
       localStorage.setItem('token', token);
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
       setUser(user);
       setIsAuthenticated(true);
       return { success: true };
     } catch (error) {
+      console.error('Login failed:', error);
       return {
         success: false,
-        message: error.response?.data?.message || 'Login failed'
+        message: error.response?.data?.message || 'Login failed. Please check your credentials.'
       };
     }
   };
 
-  const logout = () => {
-    localStorage.removeItem('token');
-    delete axios.defaults.headers.common['Authorization'];
-    setUser(null);
-    setIsAuthenticated(false);
+  const logout = async () => {
+    try {
+      await api.post('/api/auth/logout');
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      localStorage.removeItem('token');
+      setUser(null);
+      setIsAuthenticated(false);
+    }
   };
 
   const changePassword = async (currentPassword, newPassword) => {
     try {
-      await axios.post('/api/change-password', {
+      await api.post('/api/auth/change-password', {
         current_password: currentPassword,
         new_password: newPassword
       });
@@ -72,20 +76,21 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const value = {
+    user,
+    isAuthenticated,
+    isLoading,
+    login,
+    logout,
+    changePassword
+  };
+
   if (isLoading) {
     return <div>Loading...</div>;
   }
 
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        isAuthenticated,
-        login,
-        logout,
-        changePassword
-      }}
-    >
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );
