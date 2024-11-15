@@ -5,14 +5,15 @@ WORKDIR /app
 # Copy package files
 COPY ./app/frontend/package*.json ./
 
-# Install dependencies with legacy peer deps flag to avoid React issues
-RUN npm install --legacy-peer-deps
+# Clear npm cache and install dependencies
+RUN npm cache clean --force && \
+    npm install --legacy-peer-deps
 
 # Copy the rest of the application
 COPY ./app/frontend .
 
-# Build the application
-RUN npm run build
+# Build the application with explicit environment variable
+RUN GENERATE_SOURCEMAP=false npm run build
 
 # Production environment
 FROM node:18-alpine
