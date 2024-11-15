@@ -23,7 +23,7 @@ def auth_required(f):
 
 bp = Blueprint('main', __name__)
 
-@bp.route('/api/login', methods=['POST'])
+@bp.route('/api/auth/login', methods=['POST'])
 def login():
     if not request.is_json:
         logger.warning('Login attempt with non-JSON data')
@@ -49,15 +49,37 @@ def login():
         logger.info(f'Successful login for user: {user.username}')
         return jsonify({
             'success': True,
-            'is_admin': user.is_admin,
-            'first_login': user.first_login
+            'token': 'dummy-token',  # We'll implement proper JWT later
+            'user': {
+                'id': user.id,
+                'username': user.username,
+                'is_admin': user.is_admin
+            }
         })
-    else:
-        logger.warning(f'Failed login attempt for username: {username}')
-        return jsonify({
-            'success': False,
-            'message': 'Invalid username or password'
-        }), 401
+    
+    logger.warning(f'Failed login attempt for username: {username}')
+    return jsonify({
+        'success': False,
+        'message': 'Invalid username or password'
+    }), 401
+
+@bp.route('/api/auth/verify-token', methods=['GET'])
+@auth_required
+def verify_token():
+    return jsonify({
+        'success': True,
+        'user': {
+            'id': current_user.id,
+            'username': current_user.username,
+            'is_admin': current_user.is_admin
+        }
+    })
+
+@bp.route('/api/auth/logout', methods=['POST'])
+@auth_required
+def logout():
+    logout_user()
+    return jsonify({'success': True})
 
 @bp.route('/api/change_password', methods=['POST'])
 @auth_required
@@ -448,21 +470,6 @@ def get_picks():
         'success': True,
         'picks': picks_list
     })
-
-@bp.route('/api/logout')
-@auth_required
-def logout():
-    """Handle user logout."""
-    logger.info(f'User logged out: {current_user.username}')
-    logout_user()
-    return jsonify({'success': True})
-
-@bp.route('/api/auth/logout', methods=['POST'])
-@login_required
-def logout_new():
-    """Logout the current user"""
-    logout_user()
-    return jsonify({'message': 'Successfully logged out'})
 
 @bp.route('/api/games/week/<int:week>')
 @auth_required
