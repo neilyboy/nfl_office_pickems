@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Card,
@@ -21,11 +21,7 @@ export default function WeeklyPicks() {
   const [games, setGames] = useState([]);
   const [picks, setPicks] = useState({});
 
-  useEffect(() => {
-    fetchGames();
-  }, [week]);
-
-  const fetchGames = async () => {
+  const fetchGames = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -38,7 +34,11 @@ export default function WeeklyPicks() {
       setError('Failed to load games. Please try again later.');
       setLoading(false);
     }
-  };
+  }, [week]);
+
+  useEffect(() => {
+    fetchGames();
+  }, [fetchGames]);
 
   const handlePickChange = async (gameId, team) => {
     try {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Card,
@@ -32,13 +32,9 @@ export default function Leaderboard() {
   const [loading, setLoading] = useState(true);
   const [seasonData, setSeasonData] = useState([]);
   const [weeklyData, setWeeklyData] = useState([]);
-  const [currentWeek, setCurrentWeek] = useState(1);
+  const [currentWeek] = useState(1);
 
-  useEffect(() => {
-    fetchLeaderboardData();
-  }, []);
-
-  const fetchLeaderboardData = async () => {
+  const fetchLeaderboardData = useCallback(async () => {
     try {
       const [seasonResponse, weeklyResponse] = await Promise.all([
         axios.get('/api/leaderboard/season'),
@@ -58,7 +54,11 @@ export default function Leaderboard() {
       setSeasonData([]);
       setWeeklyData([]);
     }
-  };
+  }, [currentWeek]);
+
+  useEffect(() => {
+    fetchLeaderboardData();
+  }, [fetchLeaderboardData]);
 
   const handleTabChange = (event, newValue) => {
     setValue(newValue);
