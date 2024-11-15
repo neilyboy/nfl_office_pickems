@@ -15,13 +15,8 @@ logger = logging.getLogger(__name__)
 def auth_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        # Check if user is authenticated using Flask-Login's current_user
         if not current_user.is_authenticated:
-            logger.warning('Authentication required')
-            return jsonify({
-                'success': False,
-                'message': 'Authentication required'
-            }), 401
+            return jsonify({'error': 'Unauthorized'}), 401
         return f(*args, **kwargs)
     return decorated_function
 

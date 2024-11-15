@@ -50,6 +50,8 @@ export default function Leaderboard() {
     } catch (error) {
       console.error('Error fetching leaderboard data:', error);
       setLoading(false);
+      setSeasonData([]);
+      setWeeklyData([]);
     }
   };
 
