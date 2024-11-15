@@ -3,6 +3,7 @@ import logging
 from datetime import datetime
 from .models import Game
 from . import db
+from sqlalchemy import text
 
 logger = logging.getLogger(__name__)
 
@@ -70,9 +71,9 @@ def update_game_scores():
     This function is called every 5 minutes by the scheduler.
     """
     try:
-        # Get all games that haven't been completed yet using column attribute
+        # Get all games that haven't been completed yet using db.text for the filter
         active_statuses = ['scheduled', 'in_progress']
-        games = Game.query.filter(Game.__table__.c.status.in_(active_statuses)).all()
+        games = db.session.query(Game).filter(text("status in ('scheduled', 'in_progress')")).all()
         
         if not games:
             logger.info("No active games to update")
