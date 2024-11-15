@@ -12,11 +12,11 @@ services:
       - ./logs:/logs
     environment:
       - FLASK_ENV=production
-      - FLASK_APP=backend.app:create_app()
+      - FLASK_APP=app:create_app()
       - SECRET_KEY=${SECRET_KEY:-default_dev_key}
       - DATABASE_URL=sqlite:///data/nfl_pickems.db
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
-      - PYTHONPATH=/app
+      - PYTHONPATH=/app/backend
     restart: unless-stopped
 
   frontend:
