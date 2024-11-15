@@ -36,7 +36,7 @@ def create_app():
     app.config['LOGIN_DISABLED'] = False
     app.config['USE_SESSION_FOR_NEXT'] = False
     
-    # Initialize extensions
+    # Initialize extensions with app
     db.init_app(app)
     login_manager.init_app(app)
     bcrypt.init_app(app)
@@ -49,80 +49,46 @@ def create_app():
     login_manager.needs_refresh_message_category = None
     login_manager.refresh_view = None
     login_manager.login_view = None  # Disable redirect for unauthorized access
-    login_manager.login_message = None  # Disable default login message
-
-    @login_manager.unauthorized_handler
-    def unauthorized():
-        """Handle unauthorized access attempts."""
-        logger.warning('Unauthorized access attempt')
-        return jsonify({
-            'success': False,
-            'message': 'Authentication required'
-        }), 401
-
-    @login_manager.user_loader
-    def load_user(user_id):
-        """Load user from database."""
-        try:
-            if not user_id:
-                return None
-            from .models import User
-            return User.query.get(int(user_id))
-        except Exception as e:
-            logger.error(f'Error loading user {user_id}: {str(e)}')
-            return None
-
-    # Import models after db initialization
+    
+    # Import models
     from .models import User, Game, Pick
     
-    # Initialize database manager
-    from .utils import DatabaseManager
-    db_manager = DatabaseManager(app)
-
-    def update_games():
-        """Update games from ESPN API."""
-        try:
-            from .espn_api import ESPNAPI
-            espn_api = ESPNAPI()
-            current_week = espn_api.get_current_week()
-            games = espn_api.get_games(current_week)
-            
-            for game_data in games:
-                game = Game.query.filter_by(espn_id=game_data['espn_id']).first()
-                if not game:
-                    game = Game(espn_id=game_data['espn_id'])
-                    db.session.add(game)
-                
-                game.week = current_week
-                game.home_team = game_data['home_team']
-                game.away_team = game_data['away_team']
-                game.start_time = game_data['start_time']
-                
-                if game_data['is_finished']:
-                    game.final_score_home = game_data['home_score']
-                    game.final_score_away = game_data['away_score']
-                    game.winner = game_data['home_team'] if game_data['home_score'] > game_data['away_score'] else game_data['away_team']
-            
-            db.session.commit()
-            logger.info(f"Successfully updated games for week {current_week}")
-            
-        except Exception as e:
-            logger.error(f"Error updating games: {str(e)}")
-            db.session.rollback()
-
-    # Initialize scheduler
-    scheduler = BackgroundScheduler()
-    scheduler.add_job(func=update_games, trigger="interval", minutes=10)
-    scheduler.start()
-
+    @login_manager.user_loader
+    def load_user(user_id):
+        return User.query.get(int(user_id))
+    
     # Import and register blueprints
     from .routes import bp as routes_bp
     app.register_blueprint(routes_bp)
-
-    return app
-
-if __name__ == '__main__':
-    app = create_app()
+    
+    # Initialize scheduler
+    scheduler = BackgroundScheduler()
+    
+    def update_games():
+        with app.app_context():
+            from .game_updater import update_game_scores
+            update_game_scores()
+    
+    scheduler.add_job(update_games, 'interval', minutes=5, id='update_games')
+    scheduler.start()
+    
+    # Create database tables
     with app.app_context():
         db.create_all()
-    app.run(debug=True, host='0.0.0.0')
+        
+        # Create admin user if it doesn't exist
+        if not User.query.filter_by(username='admin').first():
+            admin = User(
+                username='admin',
+                password_hash=bcrypt.generate_password_hash('admin'),
+                is_admin=True,
+                first_login=True
+            )
+            db.session.add(admin)
+            db.session.commit()
+            logger.info('Created default admin user')
+    
+    return app
+
+# For use by other modules
+from .models import User, Game, Pick

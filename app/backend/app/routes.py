@@ -1,11 +1,11 @@
-from flask import jsonify, request, send_file
-from flask_login import current_user, login_user, logout_user, login_manager
-from app import app, db, bcrypt, User, Game, Pick, login_manager
+from flask import Blueprint, jsonify, request, send_file
+from flask_login import current_user, login_user, logout_user
+from . import db, bcrypt, User, Game, Pick, login_manager
 from datetime import datetime, timedelta
 import json
 from sqlalchemy import case, func
-from app.utils import require_admin
-from app import db_manager
+from .utils import require_admin
+from . import db_manager
 from functools import wraps
 import logging
 
@@ -26,7 +26,9 @@ def auth_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
-@app.route('/api/login', methods=['POST'])
+bp = Blueprint('main', __name__)
+
+@bp.route('/api/login', methods=['POST'])
 def login():
     if not request.is_json:
         logger.warning('Login attempt with non-JSON data')
@@ -62,7 +64,7 @@ def login():
             'message': 'Invalid username or password'
         }), 401
 
-@app.route('/api/change_password', methods=['POST'])
+@bp.route('/api/change_password', methods=['POST'])
 @auth_required
 def change_password():
     data = request.get_json()
@@ -72,7 +74,7 @@ def change_password():
     logger.info(f'Password changed for user: {current_user.username}')
     return jsonify({'success': True})
 
-@app.route('/api/picks', methods=['GET', 'POST'])
+@bp.route('/api/picks', methods=['GET', 'POST'])
 @auth_required
 def picks():
     """Handle picks for the current user."""
@@ -141,7 +143,7 @@ def picks():
             'picks': picks_list
         })
 
-@app.route('/api/admin/users', methods=['GET', 'POST', 'PUT', 'DELETE'])
+@bp.route('/api/admin/users', methods=['GET', 'POST', 'PUT', 'DELETE'])
 @auth_required
 @require_admin
 def manage_users():
@@ -198,7 +200,7 @@ def manage_users():
         logger.info(f'User deleted by admin: {current_user.username}, user: {user.username}')
         return jsonify({'success': True})
 
-@app.route('/api/admin/backup', methods=['POST'])
+@bp.route('/api/admin/backup', methods=['POST'])
 @auth_required
 @require_admin
 def create_backup():
@@ -216,7 +218,7 @@ def create_backup():
             'message': str(e)
         }), 500
 
-@app.route('/api/admin/backup/restore', methods=['POST'])
+@bp.route('/api/admin/backup/restore', methods=['POST'])
 @auth_required
 @require_admin
 def restore_backup():
@@ -241,7 +243,7 @@ def restore_backup():
             'message': str(e)
         }), 500
 
-@app.route('/api/admin/backups', methods=['GET'])
+@bp.route('/api/admin/backups', methods=['GET'])
 @auth_required
 @require_admin
 def list_backups():
@@ -259,7 +261,7 @@ def list_backups():
             'message': str(e)
         }), 500
 
-@app.route('/api/leaderboard', methods=['GET'])
+@bp.route('/api/leaderboard', methods=['GET'])
 @auth_required
 def leaderboard():
     week = request.args.get('week', type=int)
@@ -296,7 +298,7 @@ def leaderboard():
     logger.info(f'Leaderboard retrieved for user: {current_user.username}')
     return jsonify({'leaderboard': leaderboard})
 
-@app.route('/api/stats', methods=['GET'])
+@bp.route('/api/stats', methods=['GET'])
 @auth_required
 def stats():
     user_id = request.args.get('user_id', type=int) or current_user.id
@@ -339,7 +341,7 @@ def stats():
         }
     })
 
-@app.route('/api/get_picks')
+@bp.route('/api/get_picks')
 @auth_required
 def get_picks():
     """Get picks for a specific week."""
@@ -370,7 +372,7 @@ def get_picks():
         'picks': picks_list
     })
 
-@app.route('/api/logout')
+@bp.route('/api/logout')
 @auth_required
 def logout():
     """Handle user logout."""
